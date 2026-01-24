@@ -1,0 +1,8 @@
+ollama:
+  url: http://localhost:11434/api/generate
+  model: phi3:mini
+  options:
+    max-tokens: 40
+    temperature: 0.2
+  timeout:
+    connect-seconds: 10
