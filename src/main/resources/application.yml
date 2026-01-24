@@ -1,6 +1,7 @@
 ollama:
-  url: http://localhost:11434/api/generate
+  url: http://localhost:11434/api/
   model: phi3:mini
+  embedding-model: nomic-embed-text
   options:
     max-tokens: 40
     temperature: 0.2

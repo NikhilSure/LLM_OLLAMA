@@ -1,6 +1,7 @@
 package com.nsure.LLM_OLLAMA.Service;
 
 import com.nsure.LLM_OLLAMA.Client.OllamaClient;
+import com.nsure.LLM_OLLAMA.DTO.OllamaEmbeddingResponse;
 import com.nsure.LLM_OLLAMA.DTO.OllamaGenerateResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,5 +23,9 @@ public class OllamaChatService {
 
     public void chatWithStream(String message, Consumer<String> onReply) {
         ollamaClient.generateWithStream(message, onReply);
+    }
+
+    public OllamaEmbeddingResponse getEmbeddings(String userPrompt) {
+        return ollamaClient.getEmbeddings(userPrompt);
     }
 }

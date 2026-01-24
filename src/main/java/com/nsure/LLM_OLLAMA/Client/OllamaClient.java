@@ -1,7 +1,9 @@
 package com.nsure.LLM_OLLAMA.Client;
 
 import com.nsure.LLM_OLLAMA.Config.PlatformProperties;
+import com.nsure.LLM_OLLAMA.Constant.ApiEndpoints;
 import com.nsure.LLM_OLLAMA.Constant.OllamaPrompt;
+import com.nsure.LLM_OLLAMA.DTO.OllamaEmbeddingResponse;
 import com.nsure.LLM_OLLAMA.DTO.OllamaGenerateResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -52,10 +54,11 @@ public class OllamaClient {
 
                 """.formatted(platformProperties.getModel(), buildPrompt(prompt), platformProperties.getOptions().getMaxTokens(), platformProperties.getOptions().getTemperature());
 
-        System.out.println(body);
+        System.out.println(" OllamaClient: generate() :: " + body);
+
         int attempts = 3;
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(platformProperties.getUrl()))
+                .uri(URI.create(platformProperties.getUrl() + ApiEndpoints.OLLAMA_GENERATE))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
@@ -101,8 +104,10 @@ public class OllamaClient {
                 platformProperties.getOptions().getTemperature()
         );
 
+        System.out.println(" OllamaClient: generateWithStream() :: " + body);
+
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(platformProperties.getUrl()))
+                .uri(URI.create(platformProperties.getUrl() + ApiEndpoints.OLLAMA_GENERATE))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
@@ -110,7 +115,7 @@ public class OllamaClient {
         try {
             HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
-            // this will continously read generated tokens(Reponse)
+            // this will continuously read generated tokens(response)
             try (BufferedReader br = new BufferedReader(
                     new InputStreamReader(response.body()))) {
 
@@ -131,6 +136,47 @@ public class OllamaClient {
 
     }
 
+    public OllamaEmbeddingResponse  getEmbeddings(String userPrompt) {
+        String body = """
+                {
+                  "model": "%s",
+                  "prompt": "%s"
+                }
+                """.formatted(
+                platformProperties.getModel(),
+                cleanPrompt(userPrompt));
+
+
+        System.out.println(" OllamaClient: getEmbeddings() :: " + body);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(platformProperties.getUrl() + ApiEndpoints.OLLAMA_EMBEDDING))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        try {
+            // json string response
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println("Response  from " + response.body());
+
+            // add checks for response
+            if (response.statusCode() == 200) {
+                return mapper.readValue(response.body(), OllamaEmbeddingResponse.class);
+            }else if (response.statusCode() == 400) {
+                throw new IllegalArgumentException("Bad request to Ollama");
+            } else {
+                throw new RuntimeException("Unable to get Embeddings from ollama");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("OLLAMA CLIENT failed to generate embeddings");
+        }
+    }
+
+    private String cleanPrompt(String prompt) {
+        return prompt.replace("\n", " ").replace("\"", "\\\"");
+    }
 
     private String buildPrompt(String userMessage) {
         String prompt = OllamaPrompt.SYSTEM_PROMPT.replace("\n", " ") + "user question: " + userMessage;

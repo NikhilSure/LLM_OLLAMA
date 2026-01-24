@@ -2,6 +2,7 @@ package com.nsure.LLM_OLLAMA.Controller;
 
 import com.nsure.LLM_OLLAMA.DTO.ChatRequest;
 import com.nsure.LLM_OLLAMA.DTO.ChatResponse;
+import com.nsure.LLM_OLLAMA.DTO.OllamaEmbeddingResponse;
 import com.nsure.LLM_OLLAMA.Service.OllamaChatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,32 +18,32 @@ public class OllamaChatController {
     @Autowired
     private OllamaChatService ollamaChatService;
 
-        @PostMapping("/chat" )
-        public ChatResponse chat(@RequestBody ChatRequest request) {
+    @PostMapping("/chat")
+    public ChatResponse chat(@RequestBody ChatRequest request) {
 
-            if (request.getMessage().isBlank() || request.getMessage().isEmpty()) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Message must not be empty"
-                );
-            }
-
-            ChatResponse response = new ChatResponse();
-            try {
-                response.setReply(ollamaChatService.chat(request.getMessage()));
-            } catch (Exception e) {
-                e.printStackTrace();
-                throw new ResponseStatusException(
-                        HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Error while generating response"
-                );
-            }
-
-            return response;
+        if (request.getMessage().isBlank() || request.getMessage().isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Message must not be empty"
+            );
         }
 
+        ChatResponse response = new ChatResponse();
+        try {
+            response.setReply(ollamaChatService.chat(request.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error while generating response"
+            );
+        }
 
-    @PostMapping("/StreamChat" )
+        return response;
+    }
+
+
+    @PostMapping("/StreamChat")
     public SseEmitter StreamChat(@RequestBody ChatRequest request) {
         SseEmitter emitter = new SseEmitter(0L);
 
@@ -54,6 +55,7 @@ public class OllamaChatController {
         }
 
         try {
+            /// thread will help us to run this emitter code independence of the controller thread
             new Thread(() -> {
                 try {
                     ollamaChatService.chatWithStream(request.getMessage(), token -> {
@@ -82,5 +84,16 @@ public class OllamaChatController {
     }
 
 
+    @PostMapping("/embedVectors")
+    public OllamaEmbeddingResponse embed(@RequestBody ChatRequest request) {
+
+        if (request.getMessage().isBlank() || request.getMessage().isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Message must not be empty"
+            );
+        }
+        return ollamaChatService.getEmbeddings(request.getMessage());
+    }
 
 }

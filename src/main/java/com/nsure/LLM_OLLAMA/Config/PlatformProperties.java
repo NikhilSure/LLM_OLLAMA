@@ -8,6 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class PlatformProperties {
     private String url;
     private String model;
+    private String embeddingModel;
     private Options options = new Options();
     private TimeOut timeout = new TimeOut();
 
