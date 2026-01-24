@@ -1,9 +1,12 @@
 package com.nsure.LLM_OLLAMA.Rag;
 
+import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+@Component
 public class InMemoryVectorStore {
 
     private final List<VectorDocument> vectorDocuments = new ArrayList<>();
