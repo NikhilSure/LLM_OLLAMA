@@ -23,16 +23,16 @@ public class RAGDataLoader {
             "Employees can work from home twice a week."
     );
 
-    @PostConstruct
-    public void fillInMemoryVectorDB() {
-        System.out.println("before fillInMemoryVectorDB:::: " + System.currentTimeMillis());
-
-        for (String line : documentData) {
-            OllamaEmbeddingResponse embeddingResponse = ollamaClient.getEmbeddings(line);
-            VectorDocument vectorDocument = new VectorDocument(line, embeddingResponse.getEmbedding());
-            inMemoryVectorStore.addVectorDocument(vectorDocument);
-        }
-
-        System.out.println("after fillInMemoryVectorDB:::: " + System.currentTimeMillis());
-    }
+//    @PostConstruct
+//    public void fillInMemoryVectorDB() {
+//        System.out.println("before fillInMemoryVectorDB:::: " + System.currentTimeMillis());
+//
+//        for (String line : documentData) {
+//            OllamaEmbeddingResponse embeddingResponse = ollamaClient.getEmbeddings(line);
+//            VectorDocument vectorDocument = new VectorDocument(line, embeddingResponse.getEmbedding());
+//            inMemoryVectorStore.addVectorDocument(vectorDocument);
+//        }
+//
+//        System.out.println("after fillInMemoryVectorDB:::: " + System.currentTimeMillis());
+//    }
 }

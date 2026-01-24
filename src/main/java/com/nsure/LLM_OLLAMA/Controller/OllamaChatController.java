@@ -42,6 +42,30 @@ public class OllamaChatController {
         return response;
     }
 
+    @PostMapping("/knowledgeChat")
+    public ChatResponse chatWithContext(@RequestBody ChatRequest request) {
+
+        if (request.getMessage().isBlank() || request.getMessage().isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Message must not be empty"
+            );
+        }
+
+        ChatResponse response = new ChatResponse();
+
+        try {
+            response.setReply(ollamaChatService.chatWithContext(request.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error while generating response"
+            );
+        }
+
+        return response;
+    }
 
     @PostMapping("/StreamChat")
     public SseEmitter StreamChat(@RequestBody ChatRequest request) {
@@ -59,6 +83,46 @@ public class OllamaChatController {
             new Thread(() -> {
                 try {
                     ollamaChatService.chatWithStream(request.getMessage(), token -> {
+                        try {
+                            emitter.send(token);
+                        } catch (IOException e) {
+                            emitter.completeWithError(e);
+                        }
+                    });
+                    emitter.complete();
+                } catch (Exception e) {
+                    emitter.completeWithError(e);
+                }
+            }).start();
+
+
+            return emitter;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error while generating response"
+            );
+        }
+    }
+
+            @PostMapping("/StreamChatWithContext")
+    public SseEmitter StreamChatWithContext(@RequestBody ChatRequest request) {
+        SseEmitter emitter = new SseEmitter(0L);
+
+        if (request.getMessage().isBlank() || request.getMessage().isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Message must not be empty"
+            );
+        }
+
+        try {
+            /// thread will help us to run this emitter code independence of the controller thread
+            new Thread(() -> {
+                try {
+                    ollamaChatService.chatWithContextStream(request.getMessage(), token -> {
                         try {
                             emitter.send(token);
                         } catch (IOException e) {

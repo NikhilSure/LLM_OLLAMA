@@ -40,7 +40,16 @@ public class OllamaClient {
         this.mapper = new ObjectMapper();
     }
 
-    public OllamaGenerateResponse generate(String prompt) throws InterruptedException, IOException {
+    public OllamaGenerateResponse generate(String prompt, boolean gotContext) throws InterruptedException, IOException {
+
+        String cleanedPrompt;
+
+        if (gotContext) {
+            cleanedPrompt = prompt;
+        } else {
+            cleanedPrompt = buildPrompt(prompt);
+        }
+
         String body = """
                 {
                   "model": "%s",
@@ -52,7 +61,7 @@ public class OllamaClient {
                   }
                 }
 
-                """.formatted(platformProperties.getModel(), buildPrompt(prompt), platformProperties.getOptions().getMaxTokens(), platformProperties.getOptions().getTemperature());
+                """.formatted(platformProperties.getModel(), cleanedPrompt, platformProperties.getOptions().getMaxTokens(), platformProperties.getOptions().getTemperature());
 
         System.out.println(" OllamaClient: generate() :: " + body);
 
@@ -69,6 +78,7 @@ public class OllamaClient {
                         httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
                 if (response.statusCode() == 200) {
+                    System.out.println("Response:: " + response.body());
                     return mapper.readValue(response.body(), OllamaGenerateResponse.class);
                 }
 
@@ -85,7 +95,16 @@ public class OllamaClient {
         throw new RuntimeException("Ollama request failed after retries");
     }
 
-    public void generateWithStream(String userPrompt, Consumer<String> onToken) {
+    public void generateWithStream(String message, Consumer<String> onToken, boolean gotContext) {
+
+
+        String cleanedPrompt;
+
+        if (gotContext) {
+            cleanedPrompt = message;
+        } else {
+            cleanedPrompt = buildPrompt(message);
+        }
 
         String body = """
     {
@@ -99,7 +118,7 @@ public class OllamaClient {
     }
     """.formatted(
                 platformProperties.getModel(),
-                buildPrompt(userPrompt),
+                cleanedPrompt,
                 platformProperties.getOptions().getMaxTokens(),
                 platformProperties.getOptions().getTemperature()
         );

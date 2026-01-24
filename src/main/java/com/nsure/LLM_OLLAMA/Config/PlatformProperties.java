@@ -9,6 +9,7 @@ public class PlatformProperties {
     private String url;
     private String model;
     private String embeddingModel;
+    private String vectorJsonPath;
     private Options options = new Options();
     private TimeOut timeout = new TimeOut();
 
