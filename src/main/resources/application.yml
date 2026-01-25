@@ -8,3 +8,10 @@ ollama:
     temperature: 0.2
   timeout:
     connect-seconds: 10
+
+qdrant:
+  url: http://localhost:6333
+  collection: documents
+  vector-size: 768
+  distance: Cosine
+  connection: 10

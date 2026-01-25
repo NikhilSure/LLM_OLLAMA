@@ -3,6 +3,7 @@ package com.nsure.LLM_OLLAMA.Controller;
 import com.nsure.LLM_OLLAMA.DTO.ChatRequest;
 import com.nsure.LLM_OLLAMA.DTO.ChatResponse;
 import com.nsure.LLM_OLLAMA.DTO.OllamaEmbeddingResponse;
+import com.nsure.LLM_OLLAMA.DTO.QdrantIngestRequest;
 import com.nsure.LLM_OLLAMA.Service.OllamaChatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -158,6 +159,12 @@ public class OllamaChatController {
             );
         }
         return ollamaChatService.getEmbeddings(request.getMessage());
+    }
+
+
+    @PostMapping("/qdrant/ingest")
+    public String ingestTextToQdrant(@RequestBody QdrantIngestRequest request) {
+
     }
 
 }
