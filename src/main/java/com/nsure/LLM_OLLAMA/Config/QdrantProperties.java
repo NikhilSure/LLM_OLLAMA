@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class QdrantProperties {
     private String url;
     private String collection;
-    private String vectorSize;
+    private int vectorSize;
     private String distance;
     private int connection;
 }

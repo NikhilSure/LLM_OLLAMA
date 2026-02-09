@@ -1,10 +1,8 @@
 package com.nsure.LLM_OLLAMA.Controller;
 
-import com.nsure.LLM_OLLAMA.DTO.ChatRequest;
-import com.nsure.LLM_OLLAMA.DTO.ChatResponse;
-import com.nsure.LLM_OLLAMA.DTO.OllamaEmbeddingResponse;
-import com.nsure.LLM_OLLAMA.DTO.QdrantIngestRequest;
+import com.nsure.LLM_OLLAMA.DTO.*;
 import com.nsure.LLM_OLLAMA.Service.OllamaChatService;
+import com.nsure.LLM_OLLAMA.Service.QdrantService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -12,12 +10,17 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 public class OllamaChatController {
 
     @Autowired
     private OllamaChatService ollamaChatService;
+
+    @Autowired
+    private QdrantService qdrantService;
 
     @PostMapping("/chat")
     public ChatResponse chat(@RequestBody ChatRequest request) {
@@ -80,7 +83,7 @@ public class OllamaChatController {
         }
 
         try {
-            /// thread will help us to run this emitter code independence of the controller thread
+            // thread will help us to run this emitter code independence of the controller thread
             new Thread(() -> {
                 try {
                     ollamaChatService.chatWithStream(request.getMessage(), token -> {
@@ -163,8 +166,22 @@ public class OllamaChatController {
 
 
     @PostMapping("/qdrant/ingest")
-    public String ingestTextToQdrant(@RequestBody QdrantIngestRequest request) {
+    public QdrantIngestionResponse ingestTextToQdrant(@RequestBody QdrantIngestRequest request) {
+        int num_chunks = qdrantService.textIngestion(request.getText(), request.getSource());
 
+        QdrantIngestionResponse response = new QdrantIngestionResponse();
+        response.setNum_chunks(num_chunks);
+        response.setStatus("completed ingestion");
+        return response;
     }
 
+
+    @PostMapping("/qdrant/search")
+    public List<String> getRealtedContext(@RequestBody QdrantIngestRequest request) {
+         return qdrantService.getRelatedContext(request.getText(), request.getSource());
+    }
+
+
+
 }
+

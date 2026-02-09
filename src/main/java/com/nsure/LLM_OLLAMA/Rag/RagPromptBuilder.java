@@ -2,6 +2,7 @@ package com.nsure.LLM_OLLAMA.Rag;
 
 import com.nsure.LLM_OLLAMA.Client.OllamaClient;
 import com.nsure.LLM_OLLAMA.Constant.OllamaPrompt;
+import com.nsure.LLM_OLLAMA.Service.QdrantService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -16,13 +17,17 @@ public class RagPromptBuilder {
 
     @Autowired
     private OllamaClient ollamaClient;
+    @Autowired
+    private QdrantService qdrantService;
 
     public String build(String UserPrompt) {
-        List<Double> embeddings = ollamaClient.getEmbeddings(UserPrompt).getEmbedding();
+//        List<Double> embeddings = ollamaClient.getEmbeddings(UserPrompt).getEmbedding();
 
-        String context = inMemoryVectorStore.getRelatedKDocuments(embeddings, 2).stream()
-                .map(doc -> "- " + doc.getText())
-                .collect(Collectors.joining("\n"));
+//        String context = inMemoryVectorStore.getRelatedKDocuments(embeddings, 2).stream()
+//                .map(doc -> "- " + doc.getText())
+//                .collect(Collectors.joining("\n"));
+
+        String context = String.join("\n", qdrantService.getRelatedContext(UserPrompt, "test"));
 
         return """
                 %s
