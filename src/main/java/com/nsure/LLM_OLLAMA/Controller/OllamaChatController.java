@@ -1,8 +1,10 @@
 package com.nsure.LLM_OLLAMA.Controller;
 
 import com.nsure.LLM_OLLAMA.DTO.*;
+import com.nsure.LLM_OLLAMA.Service.ChatMessageService;
 import com.nsure.LLM_OLLAMA.Service.OllamaChatService;
 import com.nsure.LLM_OLLAMA.Service.QdrantService;
+import com.nsure.LLM_OLLAMA.Service.SessionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +14,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 public class OllamaChatController {
@@ -21,6 +24,13 @@ public class OllamaChatController {
 
     @Autowired
     private QdrantService qdrantService;
+
+    @Autowired
+    private ChatMessageService chatMessageService;
+
+    @Autowired
+    SessionService sessionService;
+
 
     @PostMapping("/chat")
     public ChatResponse chat(@RequestBody ChatRequest request) {
@@ -71,11 +81,13 @@ public class OllamaChatController {
         return response;
     }
 
+
+
     @PostMapping("/StreamChat")
     public SseEmitter StreamChat(@RequestBody ChatRequest request) {
         SseEmitter emitter = new SseEmitter(0L);
 
-        if (request.getMessage().isBlank() || request.getMessage().isEmpty()) {
+        if (request.getMessage().isEmpty() || request.getChatSessionId().isBlank() || request.getUserId().isEmpty()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Message must not be empty"
@@ -83,31 +95,46 @@ public class OllamaChatController {
         }
 
         try {
-            // thread will help us to run this emitter code independence of the controller thread
-            new Thread(() -> {
-                try {
-                    ollamaChatService.chatWithStream(request.getMessage(), token -> {
-                        try {
-                            emitter.send(token);
-                        } catch (IOException e) {
-                            emitter.completeWithError(e);
-                        }
-                    });
-                    emitter.complete();
-                } catch (Exception e) {
-                    emitter.completeWithError(e);
-                }
-            }).start();
+            chatMessageService.saveMessage(UUID.fromString(request.getChatSessionId()), request.getMessage(), "user", UUID.fromString(request.getUserId()), "USER");
+
+            try {
+                // thread will help us to run this emitter code independence of the controller thread
+                new Thread(() -> {
+                    StringBuilder fullResponse = new StringBuilder();
+                    try {
+                        ollamaChatService.chatWithStream(request.getMessage(), token -> {
+                            try {
+                                emitter.send(token);
+                                fullResponse.append(token);
+                            } catch (IOException e) {
+                                emitter.completeWithError(e);
+                            }
+                        });
+                        emitter.complete();
+                    } catch (Exception e) {
+                        emitter.completeWithError(e);
+                    }
+
+                    try {
+                        chatMessageService.saveMessage(UUID.fromString(request.getChatSessionId()), fullResponse.toString(), "phi3", UUID.fromString(request.getUserId()), "BOT");
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
 
 
-            return emitter;
+                return emitter;
 
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Error while generating response"
+                );
+            }
         } catch (Exception e) {
             e.printStackTrace();
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error while generating response"
-            );
+            throw new RuntimeException("error occured in the server " + e.getMessage());
         }
     }
 
@@ -180,8 +207,5 @@ public class OllamaChatController {
     public List<String> getRealtedContext(@RequestBody QdrantIngestRequest request) {
          return qdrantService.getRelatedContext(request.getText(), request.getSource());
     }
-
-
-
 }
 

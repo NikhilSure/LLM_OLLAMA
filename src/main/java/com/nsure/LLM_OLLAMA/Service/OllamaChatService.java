@@ -45,4 +45,48 @@ public class OllamaChatService {
         ollamaClient.generateWithStream(prompt, onToken, true);
     }
 
+
+    public String generateTitle(String message) throws Exception {
+
+        String prompt = """
+            You generate short chat titles.
+
+            Create a 3 to 6 word title for the user message below.
+
+            Rules:
+            - return ONLY the title
+            - no punctuation
+            - no quotes
+            - no emojis
+            - no extra words
+            - lowercase only
+            - summarize intent not details
+
+            User message:
+            %s
+
+            Title:
+            """.formatted(message).replace("\n", " ");
+
+        OllamaGenerateResponse res = ollamaClient.generate(prompt, true);
+
+        return sanitize(res.getResponse());
+    }
+
+    private String sanitize(String text){
+
+        if(text == null) return "new chat";
+
+        text = text.toLowerCase();
+        text = text.replaceAll("[^a-z0-9 ]", "");
+        text = text.replaceAll("\\s+", " ").trim();
+
+        if(text.length() > 60)
+            text = text.substring(0, 60);
+
+        if(text.isBlank())
+            return "new chat";
+
+        return text;
+    }
 }

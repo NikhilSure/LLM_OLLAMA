@@ -18,14 +18,18 @@ public class ChatMessage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private UUID msgId;
+    private int msgId;
 
-    private UUID chatSessionId;
-    private String userId;
+    private UUID userId;
     private String role;
 
     @Column(columnDefinition = "TEXT")
     private String content;
     private String source;
     private Long ts;
+
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chatSessionId")
+    private Session session;
 }
