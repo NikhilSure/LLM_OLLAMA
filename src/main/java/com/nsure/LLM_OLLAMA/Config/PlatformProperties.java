@@ -17,6 +17,7 @@ public class PlatformProperties {
     public static class Options {
         private int maxTokens;
         private double temperature;
+        private double topP;
     }
 
     @Data

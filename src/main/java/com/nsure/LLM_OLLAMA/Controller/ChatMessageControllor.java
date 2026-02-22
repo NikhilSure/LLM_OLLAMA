@@ -54,7 +54,7 @@ public class ChatMessageControllor {
 
     }
 
-    @DeleteMapping("deleteWithsession")
+    @PostMapping("deleteWithsession")
     public void deleteChatmessgae(@RequestBody Map<String, String> body) {
         UUID UserId = UUID.fromString(body.get("userId"));
         UUID chatSessionId = UUID.fromString(body.get("chatSessionId"));

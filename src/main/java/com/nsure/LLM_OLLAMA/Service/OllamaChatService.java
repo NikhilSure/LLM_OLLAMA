@@ -26,7 +26,7 @@ public class OllamaChatService {
     }
 
     public void chatWithStream(String message, Consumer<String> onReply) {
-        ollamaClient.generateWithStream(message, onReply, false);
+        ollamaClient.generateWithStreamChat(message, onReply, false);
     }
 
     public OllamaEmbeddingResponse getEmbeddings(String userPrompt) {
@@ -42,7 +42,7 @@ public class OllamaChatService {
 
     public void chatWithContextStream(String prompt, Consumer<String> onToken) throws IOException, InterruptedException {
         prompt = ragPromptBuilder.build(prompt);
-        ollamaClient.generateWithStream(prompt, onToken, true);
+        ollamaClient.generateWithStreamChat(prompt, onToken, true);
     }
 
 

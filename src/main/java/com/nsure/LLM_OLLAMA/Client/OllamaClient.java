@@ -7,7 +7,12 @@ import com.nsure.LLM_OLLAMA.DTO.OllamaEmbeddingResponse;
 import com.nsure.LLM_OLLAMA.DTO.OllamaGenerateResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,6 +23,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Map;
 import java.util.function.Consumer;
 
 
@@ -95,64 +101,88 @@ public class OllamaClient {
         throw new RuntimeException("Ollama request failed after retries");
     }
 
-    public void generateWithStream(String message, Consumer<String> onToken, boolean gotContext) {
-
-
-        String cleanedPrompt;
-
-        if (gotContext) {
-            cleanedPrompt = message;
-        } else {
-            cleanedPrompt = buildPrompt(message);
-        }
-
-        String body = """
-    {
-      "model": "%s",
-      "prompt": "%s",
-      "stream": true,
-      "options": {
-        "num_predict": %d,
-        "temperature": %s
-      }
-    }
-    """.formatted(
-                platformProperties.getModel(),
-                cleanedPrompt,
-                platformProperties.getOptions().getMaxTokens(),
-                platformProperties.getOptions().getTemperature()
-        );
-
-        System.out.println(" OllamaClient: generateWithStream() :: " + body);
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(platformProperties.getUrl() + ApiEndpoints.OLLAMA_GENERATE))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .build();
+    public void generateWithStreamChat(String message,
+                                       Consumer<String> onToken,
+                                       boolean gotContext) {
 
         try {
-            HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
-            // this will continuously read generated tokens(response)
-            try (BufferedReader br = new BufferedReader(
-                    new InputStreamReader(response.body()))) {
+            // Build messages array (Chat format)
+            List<Map<String, String>> messages = new ArrayList<>();
+
+            // Optional system prompt (only when no prior context)
+            if (!gotContext) {
+                Map<String, String> system = new HashMap<>();
+                system.put("role", "system");
+                system.put("content", OllamaPrompt.SYSTEM_PROMPT);
+                messages.add(system);
+            }
+
+            Map<String, String> user = new HashMap<>();
+            user.put("role", "user");
+            user.put("content", message);
+            messages.add(user);
+
+            // Build request body safely
+            Map<String, Object> requestMap = new HashMap<>();
+            requestMap.put("model", platformProperties.getModel());
+            requestMap.put("stream", true);
+            requestMap.put("messages", messages);
+
+            Map<String, Object> options = new HashMap<>();
+            options.put("temperature", platformProperties.getOptions().getTemperature());
+            options.put("num_predict", platformProperties.getOptions().getMaxTokens());
+            options.put("stop", List.of("###", "---"));
+
+            requestMap.put("options", options);
+
+            String body = mapper.writeValueAsString(requestMap);
+
+            System.out.println("🚀 Ollama Chat Request: " + body);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(platformProperties.getUrl() + "chat"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            HttpResponse<InputStream> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+
+            if (response.statusCode() != 200) {
+                throw new RuntimeException("Ollama Chat API Error: HTTP " + response.statusCode());
+            }
+
+            try (BufferedReader br =
+                         new BufferedReader(new InputStreamReader(response.body()))) {
 
                 String line;
                 while ((line = br.readLine()) != null) {
-                    OllamaGenerateResponse chunk =
-                            mapper.readValue(line, OllamaGenerateResponse.class);
 
-                    if (chunk.getResponse() != null) {
-                        onToken.accept(chunk.getResponse());
-                    }else if (chunk.getDone()) break;
+                    if (line.isBlank()) continue;
+
+                    JsonNode chunk = mapper.readTree(line);
+
+                    // Streamed chat response format
+                    JsonNode messageNode = chunk.get("message");
+
+                    if (messageNode != null && messageNode.get("content") != null) {
+                        onToken.accept(messageNode.get("content").asText());
+                        System.out.println(":::mod " +  messageNode.get("content").asText());
+                    }
+
+                    if (chunk.has("done") && chunk.get("done").asBoolean()) {
+                        break;
+                    }
                 }
             }
+
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            System.err.println(" Error in Ollama chat streaming: " + e.getMessage());
+            throw new RuntimeException("Chat streaming failed", e);
+        } finally {
+
         }
-
-
     }
 
     public OllamaEmbeddingResponse  getEmbeddings(String userPrompt) {

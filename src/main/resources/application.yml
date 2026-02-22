@@ -4,8 +4,9 @@ ollama:
   embedding-model: nomic-embed-text
   vector-json-path: /home/vasara-labs/data
   options:
-    max-tokens: 120
-    temperature: 0.2
+    max-tokens: 300
+    temperature: 0.6
+    top-p: 0.9
   timeout:
     connect-seconds: 10
 

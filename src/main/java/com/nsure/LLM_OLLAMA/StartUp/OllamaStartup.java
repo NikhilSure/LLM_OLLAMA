@@ -15,7 +15,7 @@ public class OllamaStartup {
     @PostConstruct
     public void ollamaStartup() {
         try {
-            ollamaClient.generate("ping", false);
+//            ollamaClient.generate("ping", false);
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Ollama cold start error::: " +  e.getMessage());
